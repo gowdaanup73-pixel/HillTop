@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>HillTop | Inventory Management</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- PDF & Excel Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#5e5e5e",
+                        "on-surface": "#1a1c1f",
+                        "on-secondary-fixed-variant": "#3631b4",
+                        "surface-container-high": "#e8e8ed",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#414755",
+                        "inverse-surface": "#2e3034",
+                        "on-secondary-container": "#fffbff",
+                        "primary": "#5c5c5c",
+                        "primary-container": "#747474",
+                        "surface": "#f9f9fe",
+                        "on-tertiary-container": "#fffbff",
+                        "surface-container-low": "#f3f3f8",
+                        "on-primary": "#ffffff",
+                        "on-background": "#1a1c1f",
+                        "on-primary-fixed-variant": "#474747",
+                        "tertiary": "#8a2bb9",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#4c4aca",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#1b1b1b",
+                        "secondary-container": "#6664e4",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#e8b3ff",
+                        "surface-container-highest": "#e2e2e7",
+                        "surface-bright": "#f9f9fe",
+                        "tertiary-fixed": "#f6d9ff",
+                        "inverse-on-surface": "#f0f0f5",
+                        "on-primary-container": "#fcfcfc",
+                        "on-secondary-fixed": "#0c006a",
+                        "secondary-fixed": "#e2dfff",
+                        "background": "#f9f9fe",
+                        "surface-variant": "#e2e2e7",
+                        "outline": "#717786",
+                        "surface-container": "#ededf2",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "secondary-fixed-dim": "#c2c1ff",
+                        "on-tertiary-fixed": "#310048",
+                        "on-tertiary-fixed-variant": "#7201a2",
+                        "surface-dim": "#d9dade",
+                        "tertiary-container": "#a649d5",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "outline-variant": "#c1c6d7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body { min-height: max(884px, 100dvh); }
+        .glass-edge { box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.3); }
+        .architectural-shadow { box-shadow: 0 20px 40px rgba(12, 0, 106, 0.08); }
+        .signature-gradient { background: linear-gradient(135deg, #4c4aca 0%, #8a2bb9 100%); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        
+        /* iOS System-Level Transitions */
+        #app-wrapper {
+            transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1), filter 0.6s ease;
+            transform-origin: center center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            position: relative;
+        }
+        body.modal-open #app-wrapper {
+            transform: scale(0.96);
+            border-radius: 2rem;
+            filter: brightness(0.6) blur(5px);
+        }
+
+        .modal-overlay { 
+            transition: opacity 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+            opacity: 0; 
+            pointer-events: none; 
+        }
+        .modal-overlay.active { 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
+        
+        .modal-sheet { 
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.4s ease; 
+            transform: translateY(100px) scale(0.9); 
+            opacity: 0; 
+            will-change: transform, opacity;
+        }
+        .modal-overlay.active .modal-sheet { 
+            transform: translateY(0) scale(1); 
+            opacity: 1; 
+        }
+
+        .view-section { display: none; animation: fadeIn 0.4s ease-out forwards; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+    </style>
+</head>
+
+<body class="bg-background font-body text-on-surface overflow-hidden">
+
+<div id="app-wrapper">
+
+<div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+    <div class="absolute -top-[10%] -left-[10%] w-[60%] h-[70%] bg-secondary/40 blur-[130px] rounded-full"></div>
+    <div class="absolute -bottom-[10%] -right-[10%] w-[60%] h-[70%] bg-tertiary/40 blur-[130px] rounded-full"></div>
+</div>
+
+<aside class="fixed left-0 top-0 flex flex-col py-8 bg-white/60 dark:bg-slate-900/80 backdrop-blur-3xl h-screen w-72 rounded-r-[2rem] shadow-2xl z-[60] border-r border-white/40">
+    <div class="px-8 mb-12 flex items-center gap-3">
+        <div class="w-12 h-12 rounded-[1rem] overflow-hidden shadow-lg shadow-indigo-500/30 shrink-0 bg-white border border-white flex items-center justify-center">
+            <!-- HillTop Logo Image Fallback -->
+            <img src="./hilltop-logo.jpg" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGM0YWNhIiBzdHJva2Utd2lkdGg9IjUiLz48dGV4dCB4PSI1MCIgeT0iNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI1MCIgZmlsbD0iIzRjNGFjYSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SDwvdGV4dD48L3N2Zz4='" alt="HillTop Logo" class="w-full h-full object-cover"/>
+        </div>
+        <span class="text-3xl font-black text-indigo-700 font-headline tracking-tighter">𝓗𝓲𝓵𝓵𝓣𝓸𝓹</span>
+    </div>
+
+    <nav class="flex-1 px-4 space-y-2 overflow-y-auto">
+        <button class="nav-link w-full active flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/50 border border-white/60 shadow-sm text-indigo-700 font-bold transition-all" onclick="switchView('dashboard', this)">
+            <span class="material-symbols-outlined shrink-0">dashboard</span>
+            <span>Dashboard</span>
+        </button>
+        <button class="nav-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-600 hover:bg-white/40 border border-transparent hover:border-white/50 transition-all font-medium active:scale-95" onclick="openModal('modal-search')">
+            <span class="material-symbols-outlined shrink-0">search</span>
+            <span>Search Records</span>
+        </button>
+        
+        <div class="h-px bg-indigo-900/10 my-4 mx-4"></div>
+        
+        <button class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-600 hover:bg-white/40 border border-transparent hover:border-white/50 transition-all font-medium active:scale-95" onclick="openModal('modal-update')">
+            <span class="material-symbols-outlined shrink-0">edit_square</span>
+            <span>Update Record</span>
+        </button>
+        <button class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-600 hover:bg-red-50/50 hover:border-red-200 border border-transparent transition-all font-medium active:scale-95 text-red-500" onclick="openModal('modal-delete')">
+            <span class="material-symbols-outlined shrink-0">delete</span>
+            <span>Delete Record</span>
+        </button>
+
+        <div class="h-px bg-indigo-900/10 my-4 mx-4"></div>
+        
+        <!-- File Handling CRUD Logic -->
+        <button class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-600 hover:bg-emerald-50/50 border border-transparent hover:border-emerald-200 transition-all font-medium active:scale-95" onclick="openModal('modal-export')">
+            <span class="material-symbols-outlined shrink-0 text-emerald-600">save</span>
+            <span>Export Data</span>
+        </button>
+        
+        <input type="file" id="import-input" accept=".json" class="hidden" onchange="importData(event)"/>
+        <button class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-600 hover:bg-blue-50/50 border border-transparent hover:border-blue-200 transition-all font-medium active:scale-95" onclick="document.getElementById('import-input').click()">
+            <span class="material-symbols-outlined shrink-0 text-blue-600">folder_open</span>
+            <span>Load File Data</span>
+        </button>
+    </nav>
+
+    <div class="px-6 mt-4 shrink-0">
+        <button class="w-full signature-gradient text-white font-bold rounded-2xl py-4 flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/30 hover:brightness-110 active:scale-95 transition-all" onclick="openModal('modal-add')">
+            <span class="material-symbols-outlined shrink-0">add</span> New Asset
+        </button>
+    </div>
+</aside>
+
+<main class="ml-72 h-screen relative flex flex-col">
+    <header class="fixed top-0 right-0 left-72 z-40 bg-white/40 dark:bg-slate-900/70 backdrop-blur-2xl border-b border-white/40 dark:border-white/10 flex justify-between items-center px-10 h-20 shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+        <h1 id="topbar-title" class="text-2xl font-black bg-gradient-to-br from-indigo-700 to-violet-700 bg-clip-text text-transparent font-['Manrope'] tracking-tight">Dashboard</h1>
+        
+        <div class="flex items-center gap-6">
+            <button class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-indigo-600 border border-white hover:bg-white shadow-sm transition-all active:scale-95" onclick="alert('HillTop Systems fully operational.')">
+                <span class="material-symbols-outlined">settings</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="mt-20 px-10 pt-10 pb-20 flex-1 overflow-y-auto z-10 w-full relative">
+        <div class="max-w-7xl mx-auto">
+            
+            <div id="dashboard" class="view-section flex-col space-y-12 active">
+                <section class="flex justify-between items-end">
+                    <div>
+                        <span class="text-xs font-bold text-secondary uppercase tracking-[0.2em] mb-2 block">System Status</span>
+                        <h2 class="text-5xl font-black font-headline text-on-surface tracking-tight">Operational Overview</h2>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Dynamic Readouts -->
+                    <div class="group relative overflow-hidden bg-white/50 backdrop-blur-xl rounded-[2rem] p-8 border border-white/60 shadow-[0_20px_40px_rgba(12,0,106,0.04)] hover:-translate-y-1 transition-all">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-indigo-600 text-3xl">inventory_2</span>
+                            </div>
+                        </div>
+                        <p class="text-slate-500 font-medium text-sm mb-1 uppercase tracking-widest">Active Stock Items</p>
+                        <h3 id="stat-stock" class="text-4xl font-extrabold font-headline text-on-surface">0</h3>
+                        <div class="mt-6 h-1 w-full bg-indigo-100 rounded-full overflow-hidden">
+                           <div class="h-full w-full bg-indigo-600 rounded-full"></div>
+                        </div>
+                    </div>
+
+                    <div class="group relative overflow-hidden bg-white/50 backdrop-blur-xl rounded-[2rem] p-8 border border-white/60 shadow-[0_20px_40px_rgba(12,0,106,0.04)] hover:-translate-y-1 transition-all">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-emerald-600 text-3xl">payments</span>
+                            </div>
+                        </div>
+                        <p class="text-slate-500 font-medium text-sm mb-1 uppercase tracking-widest">Gross Asset Value</p>
+                        <h3 id="stat-value" class="text-4xl font-extrabold font-headline text-on-surface">$0.00</h3>
+                        <div class="mt-6 h-1 w-full bg-emerald-100 rounded-full overflow-hidden">
+                           <div class="h-full w-full bg-emerald-500 rounded-full"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Table System -->
+                <section class="pb-10">
+                    <div class="bg-white/40 backdrop-blur-xl rounded-[2rem] py-10 px-0 border border-white/60 shadow-lg flex flex-col">
+                        <h4 class="text-xl font-bold font-headline mb-4 px-10">Master Inventory Table</h4>
+                        <p class="text-slate-500 px-10 mb-6">All registered assets actively monitored by HillTop systems.</p>
+                        
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse" style="min-width: 800px;">
+                                <thead>
+                                    <tr class="border-b-2 border-slate-200/50 text-slate-400 uppercase text-[11px] tracking-widest font-bold">
+                                        <th class="pb-4 pl-10">Asset Photo</th>
+                                        <th class="pb-4">Asset ID</th>
+                                        <th class="pb-4">Product Name</th>
+                                        <th class="pb-4">Avail. Stock</th>
+                                        <th class="pb-4">Unit Price</th>
+                                        <th class="pb-4 text-right pr-10">Total Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-table-body">
+                                    <!-- Javascript Populates This -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Empty State Wrapper -->
+                        <div id="empty-table-state" class="flex flex-col items-center justify-center py-24 text-slate-400">
+                             <span class="material-symbols-outlined text-6xl mb-2 opacity-30">view_list</span>
+                             <p class="font-bold text-sm text-slate-500 mb-4">No records found.</p>
+                             <button class="px-6 py-2 bg-white rounded-full border border-slate-200 font-bold hover:bg-slate-50 text-indigo-500 shadow-sm transition-all" onclick="openModal('modal-add')">Add First Product</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
+</div> <!-- /#app-wrapper -->
+
+<!-- ============================================== -->
+<!-- CSS IOS GLASS MODALS                           -->
+<!-- ============================================== -->
+
+<!-- iOS Toast Notification -->
+<div id="ios-toast" class="fixed top-12 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-max bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_20px_40px_rgba(0,0,0,0.1)] rounded-[1.5rem] p-4 flex items-center gap-4 transition-all duration-500 transform -translate-y-20 opacity-0 pointer-events-none">
+    <div id="ios-toast-icon" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-white">check</span>
+    </div>
+    <div>
+        <h4 id="ios-toast-title" class="font-bold text-slate-800 tracking-tight text-sm">Action Successful</h4>
+        <p id="ios-toast-msg" class="text-xs font-bold text-slate-500">The product has been updated.</p>
+    </div>
+</div>
+
+<!-- 1. ADD Modal -->
+<div id="modal-add" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/20 backdrop-blur-md modal-overlay" onclick="closeModal('modal-add')">
+    <div class="w-full max-w-2xl bg-white/70 backdrop-blur-3xl rounded-[2rem] shadow-[0_50px_100px_rgba(0,0,0,0.15)] border border-white/60 glass-edge modal-sheet" onclick="event.stopPropagation()">
+        <div class="p-10">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h3 class="text-3xl font-black font-headline text-indigo-900 tracking-tight">New Asset Entry</h3>
+                    <p class="text-slate-500 mt-1 font-medium">Auto-populates to the HillTop master table.</p>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors" onclick="closeModal('modal-add')">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <form class="space-y-6" id="add-form" onsubmit="event.preventDefault(); submitAddRecord();">
+                
+                <div class="w-full relative group">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1 block mb-2">Item Picture</label>
+                    <div id="add-dropzone" class="h-32 rounded-[1.5rem] border-2 border-dashed border-indigo-200 bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 hover:border-indigo-400 transition-all shadow-inner overflow-hidden">
+                        <span class="material-symbols-outlined text-indigo-400 text-4xl mb-2 group-hover:scale-110 transition-transform">add_photo_alternate</span>
+                        <span class="text-sm font-bold text-slate-500">Upload Product Image</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Image saved locally</span>
+                        <input type="file" id="add-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Product ID</label>
+                        <input id="add-id" class="w-full bg-white/50 border border-white/80 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-400 transition-all font-bold text-slate-800 shadow-inner" type="text" placeholder="HT-001" required/>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Product Name</label>
+                        <input id="add-name" class="w-full bg-white/50 border border-white/80 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-400 transition-all font-bold text-slate-800 shadow-inner" type="text" placeholder="Product name" required/>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Initial Quantity</label>
+                        <input id="add-stock" class="w-full bg-white/50 border border-white/80 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-400 transition-all font-bold text-slate-800 shadow-inner" type="number" min="0" placeholder="0" required/>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Unit Price ($)</label>
+                        <input id="add-price" class="w-full bg-white/50 border border-white/80 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-400 transition-all font-bold text-slate-800 shadow-inner" type="number" step="0.01" min="0" placeholder="0.00" required/>
+                    </div>
+                </div>
+                <div class="pt-6">
+                    <button type="submit" class="w-full py-4 rounded-2xl signature-gradient text-white font-bold text-lg shadow-xl shadow-indigo-500/30 hover:brightness-110 active:scale-95 transition-all">
+                        Finalize Item & Save Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 1.5 EXPORT Modal -->
+<div id="modal-export" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md modal-overlay transition-all" onclick="closeModal('modal-export')">
+    <div class="w-full max-w-sm bg-white/80 backdrop-blur-3xl rounded-[2rem] shadow-[0_50px_100px_rgba(0,0,0,0.25)] border border-white/60 modal-sheet flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+        <div class="p-8 text-center border-b border-indigo-900/5">
+            <div class="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
+                <span class="material-symbols-outlined text-4xl text-emerald-500">file_download</span>
+            </div>
+            <h3 class="text-2xl font-black font-headline text-slate-800">Export Data</h3>
+            <p class="text-sm font-bold text-slate-500 mt-2">Select a format to save your inventory.</p>
+        </div>
+        <div class="p-6 space-y-3 bg-slate-50/50">
+            <button class="w-full text-left px-6 py-4 rounded-2xl flex items-center gap-4 bg-white border border-slate-200 hover:border-blue-400 focus:border-blue-400 hover:shadow-md transition-all group outline-none" onclick="exportData('pdf')">
+                <span class="material-symbols-outlined text-red-500 text-3xl">picture_as_pdf</span>
+                <div>
+                    <div class="font-black text-slate-800 group-hover:text-blue-600 transition-colors">PDF Document</div>
+                    <div class="text-xs font-bold text-slate-400">Standard printable format</div>
+                </div>
+            </button>
+            <button class="w-full text-left px-6 py-4 rounded-2xl flex items-center gap-4 bg-white border border-slate-200 hover:border-emerald-400 focus:border-emerald-400 hover:shadow-md transition-all group outline-none" onclick="exportData('excel')">
+                <span class="material-symbols-outlined text-green-600 text-3xl">table_view</span>
+                <div>
+                    <div class="font-black text-slate-800 group-hover:text-emerald-600 transition-colors">Excel Spreadsheet</div>
+                    <div class="text-xs font-bold text-slate-400">For data analysis (.xlsx)</div>
+                </div>
+            </button>
+            <button class="w-full text-left px-6 py-4 rounded-2xl flex items-center gap-4 bg-white border border-slate-200 hover:border-amber-400 focus:border-amber-400 hover:shadow-md transition-all group outline-none" onclick="exportData('json')">
+                <span class="material-symbols-outlined text-amber-500 text-3xl">data_object</span>
+                <div>
+                    <div class="font-black text-slate-800 group-hover:text-amber-600 transition-colors">JSON File</div>
+                    <div class="text-xs font-bold text-slate-400">Raw structure for backups</div>
+                </div>
+            </button>
+        </div>
+        <div class="p-4 bg-white border-t border-indigo-900/5">
+            <button type="button" class="w-full py-3 rounded-xl border-2 border-slate-200 font-bold text-slate-500 hover:bg-slate-100 transition-all uppercase tracking-widest text-xs" onclick="closeModal('modal-export')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. SEARCH Modal -->
+<div id="modal-search" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/20 backdrop-blur-md modal-overlay transition-all" onclick="closeModal('modal-search')">
+    <div class="w-full max-w-3xl bg-white/70 backdrop-blur-3xl rounded-[2rem] shadow-[0_50px_100px_rgba(0,0,0,0.15)] border border-white/60 modal-sheet flex flex-col max-h-[80vh]" onclick="event.stopPropagation()">
+        <div class="p-8 shrink-0">
+            <form onsubmit="event.preventDefault(); closeModal('modal-search');" class="flex items-center gap-4 bg-white border border-white/60 shadow-lg rounded-2xl p-2 pr-4 transition-all focus-within:ring-2 focus-within:ring-indigo-400">
+                <div class="w-12 h-12 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-indigo-500 text-3xl">search</span>
+                </div>
+                <!-- Triggers filter on keyup automatically -->
+                <input class="flex-1 bg-transparent border-none focus:ring-0 text-xl font-bold text-slate-800 outline-none placeholder:text-slate-300" type="text" placeholder="Live search by Name or ID..." id="searchInput" onkeyup="handleLiveSearch(this.value)"/>
+                <button type="button" class="px-4 py-2 bg-slate-100 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-200 transition-colors uppercase" onclick="closeModal('modal-search')">ESC</button>
+            </form>
+        </div>
+        
+        <!-- Results Container inside the Modal -->
+        <div id="search-results-container" class="px-8 pb-8 overflow-y-auto flex-1 hidden">
+            <div id="search-results-list" class="space-y-3">
+                <!-- Javascript Injects Results Here -->
+            </div>
+        </div>
+
+        <div id="search-empty-state" class="py-12 flex flex-col items-center justify-center text-slate-400 shrink-0">
+            <span class="material-symbols-outlined text-4xl mb-4 opacity-30">travel_explore</span>
+            <p class="font-bold text-center">Type to search for records by ID or Name.<br>Press ESC to close.</p>
+        </div>
+    </div>
+</div>
+
+<!-- 3. UPDATE Modal (With Auto-Fill) -->
+<div id="modal-update" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/20 backdrop-blur-md modal-overlay" onclick="closeModal('modal-update')">
+    <div class="w-full max-w-2xl bg-white/70 backdrop-blur-3xl rounded-[2rem] shadow-[0_50px_100px_rgba(0,0,0,0.15)] border border-white/60 modal-sheet" onclick="event.stopPropagation()">
+         <div class="p-10">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h3 class="text-3xl font-black font-headline text-indigo-900 tracking-tight">Update Record</h3>
+                    <p class="text-slate-500 mt-1 font-medium">Lookup ID to auto-fill fields.</p>
+                </div>
+                 <button class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200" onclick="closeModal('modal-update')">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+             <div class="flex gap-4 mb-6">
+                 <input id="update-lookup-id" class="flex-1 bg-white border border-slate-300 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-400 font-bold" type="text" placeholder="Lookup Product ID..."/>
+                 <button class="px-8 bg-indigo-100 text-indigo-700 font-bold rounded-2xl hover:bg-indigo-200 transition-all font-headline" onclick="triggerUpdateLookup()">Auto-fill</button>
+             </div>
+
+             <div id="update-empty-msg" class="py-6 text-center text-slate-500 font-bold bg-slate-100/50 rounded-2xl border border-slate-200">
+                 <p>Enter an ID to pull data.</p>
+             </div>
+
+             <!-- Auto-fill Fields (Hidden by default) -->
+             <form id="update-form-fields" class="hidden space-y-6" onsubmit="event.preventDefault(); submitUpdateRecord();">
+                 <div class="w-full relative group">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1 block mb-2">Update Picture (Optional)</label>
+                    <div id="update-dropzone" class="h-32 rounded-[1.5rem] border-2 border-dashed border-slate-300 bg-white/40 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400">
+                        <span class="material-symbols-outlined text-slate-400 text-4xl mb-2">add_photo_alternate</span>
+                        <input type="file" id="update-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />
+                    </div>
+                 </div>
+
+                 <div class="grid grid-cols-3 gap-6">
+                    <div class="space-y-2 col-span-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Name</label>
+                        <input id="update-name" class="w-full bg-white/50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-400 font-bold" type="text" required/>
+                    </div>
+                    <div class="space-y-2 col-span-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Stock</label>
+                        <input id="update-stock" class="w-full bg-white/50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-400 font-bold" type="number" min="0" required/>
+                    </div>
+                    <div class="space-y-2 col-span-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Price</label>
+                        <input id="update-price" class="w-full bg-white/50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-400 font-bold" type="number" step="0.01" min="0" required/>
+                    </div>
+                 </div>
+                 <button type="submit" class="w-full py-4 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 active:scale-95 transition-all">Commit Changes to File</button>
+             </form>
+
+         </div>
+    </div>
+</div>
+
+<!-- 4. DELETE Modal -->
+<div id="modal-delete" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-lg modal-overlay" onclick="closeModal('modal-delete')">
+    <div class="w-full max-w-md bg-white/80 backdrop-blur-3xl rounded-[2rem] shadow-[0_50px_100px_rgba(255,0,0,0.1)] border border-red-100 modal-sheet" onclick="event.stopPropagation()">
+         <div class="p-10 text-center">
+            <div class="w-20 h-20 mx-auto bg-red-50 rounded-full flex items-center justify-center mb-6">
+                <span class="material-symbols-outlined text-red-500 text-4xl">warning</span>
+            </div>
+            <h3 class="text-3xl font-black font-headline text-slate-900 tracking-tight mb-2">Delete Asset?</h3>
+            <p class="text-slate-500 mb-8">Enter the asset ID below to permanently purge it from the database.</p>
+            
+            <form onsubmit="event.preventDefault(); submitDeleteRecord();">
+                <input id="delete-id" class="w-full bg-white border border-slate-200 text-center rounded-2xl p-4 mb-6 focus:ring-2 focus:ring-red-400 transition-all font-bold text-slate-800 shadow-inner" type="text" placeholder="Enter ID to confirm" required/>
+                
+                <div class="flex gap-4">
+                    <button type="button" class="flex-1 py-4 bg-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 active:scale-95 transition-all" onclick="closeModal('modal-delete')">Cancel</button>
+                    <button type="submit" class="flex-[1.5] py-4 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 active:scale-95 transition-all shadow-lg shadow-red-500/20">Purge Entry</button>
+                </div>
+            </form>
+         </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // HILLTOP ENGINE - REST API CRUD LOGIC
+    // ==========================================
+    
+    // Core Data Store (Synced from Spring Boot)
+    let inventory = [];
+    let currentAddBase64Image = null;
+    let currentUpdateBase64Image = null;
+
+    // Initialization
+    window.onload = () => {
+        fetchInventory();
+    };
+
+    function fetchInventory() {
+        fetch('/api/products')
+            .then(res => res.json())
+            .then(data => {
+                inventory = data;
+                refreshDashboard();
+            })
+            .catch(err => console.error("Waiting for Spring Boot Backend...", err));
+    }
+
+    function refreshDashboard(dataArray = inventory) {
+        // Render Table Display
+        const tbody = document.getElementById('inventory-table-body');
+        const emptyState = document.getElementById('empty-table-state');
+        
+        tbody.innerHTML = '';
+        
+        if (dataArray.length === 0) {
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+        } else {
+            emptyState.classList.remove('flex');
+            emptyState.classList.add('hidden');
+            
+            let totalAssetValue = 0;
+            
+            dataArray.forEach(item => {
+                const totalItemValue = parseFloat(item.stock) * parseFloat(item.price);
+                totalAssetValue += totalItemValue;
+                
+                const imgTag = item.image 
+                    ? `<img src="${item.image}" class="w-12 h-12 object-cover rounded-xl shadow-sm border border-slate-200"/>`
+                    : `<div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200"><span class="material-symbols-outlined text-slate-400">landscape</span></div>`;
+
+                tbody.innerHTML += `
+                    <tr class="border-b border-white/40 hover:bg-white/40 border-l-4 border-l-transparent hover:border-l-indigo-500 transition-all text-sm group">
+                        <td class="py-4 pl-10">${imgTag}</td>
+                        <td class="py-4 font-bold text-indigo-700">${item.id}</td>
+                        <td class="py-4 font-semibold text-slate-700">${item.name}</td>
+                        <td class="py-4 font-bold text-slate-600"><span class="bg-white px-3 py-1 rounded-full shadow-sm">${item.stock}</span></td>
+                        <td class="py-4 font-bold text-slate-500">$${parseFloat(item.price).toFixed(2)}</td>
+                        <td class="py-4 text-right pr-10 font-bold text-emerald-600 text-[15px]">$${totalItemValue.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            // Render Stats
+            document.getElementById('stat-stock').innerText = inventory.length;
+            document.getElementById('stat-value').innerText = '$' + totalAssetValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+    }
+
+    // --- CREATE (ADD) RULE ---
+    function submitAddRecord() {
+        const id = document.getElementById('add-id').value.trim();
+        const name = document.getElementById('add-name').value.trim();
+        const stock = parseInt(document.getElementById('add-stock').value);
+        const price = parseFloat(document.getElementById('add-price').value);
+
+        if(inventory.find(i => i.id.toLowerCase() === id.toLowerCase())) {
+            alert('Error: Asset ID already exists.');
+            return;
+        }
+
+        const payload = { id, name, stock, price, image: currentAddBase64Image };
+
+        fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if(!res.ok) throw new Error('Failed to create item');
+            return fetchInventory();
+        })
+        .then(() => {
+            // Reset Form
+            document.getElementById('add-form').reset();
+            currentAddBase64Image = null;
+            document.getElementById('add-dropzone').innerHTML = `
+                <span class="material-symbols-outlined text-indigo-400 text-4xl mb-2">add_photo_alternate</span>
+                <span class="text-sm font-bold text-slate-500">Upload Product Image</span>
+                <input type="file" id="add-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />
+            `;
+            setupImageUploadListeners();
+            closeModal('modal-add');
+            showToast('Asset Created', 'New product successfully registered.', 'success');
+        })
+        .catch(err => alert(err.message));
+    }
+
+    // --- UPDATE (AUTO-FILL & SAVE) RULE ---
+    function triggerUpdateLookup() {
+        const id = document.getElementById('update-lookup-id').value.trim();
+        const match = inventory.find(i => i.id.toLowerCase() === id.toLowerCase());
+        
+        if(match) {
+            document.getElementById('update-empty-msg').classList.add('hidden');
+            document.getElementById('update-form-fields').classList.remove('hidden');
+            
+            document.getElementById('update-name').value = match.name;
+            document.getElementById('update-stock').value = match.stock;
+            document.getElementById('update-price').value = match.price;
+            currentUpdateBase64Image = match.image || null;
+            
+            if(match.image) {
+                document.getElementById('update-dropzone').innerHTML = `<img src="${match.image}" class="h-full w-full object-cover"/><input type="file" id="update-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />`;
+            } else {
+                 document.getElementById('update-dropzone').innerHTML = `<span class="material-symbols-outlined text-slate-400 text-4xl mb-2">add_photo_alternate</span><input type="file" id="update-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />`;
+            }
+            setupImageUploadListeners();
+        } else {
+            alert('Asset ID not found in database.');
+            document.getElementById('update-empty-msg').classList.remove('hidden');
+            document.getElementById('update-form-fields').classList.add('hidden');
+        }
+    }
+
+    function submitUpdateRecord() {
+        const id = document.getElementById('update-lookup-id').value.trim();
+        
+        const payload = {
+            id: id,
+            name: document.getElementById('update-name').value,
+            stock: parseInt(document.getElementById('update-stock').value),
+            price: parseFloat(document.getElementById('update-price').value),
+            image: currentUpdateBase64Image
+        };
+
+        fetch('/api/products/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if(!res.ok) throw new Error('Update failed');
+            return fetchInventory();
+        })
+        .then(() => {
+            closeModal('modal-update');
+            document.getElementById('update-empty-msg').classList.remove('hidden');
+            document.getElementById('update-form-fields').classList.add('hidden');
+            document.getElementById('update-lookup-id').value = '';
+            showToast('Asset Updated', 'Changes applied to inventory.', 'success');
+        })
+        .catch(err => alert(err.message));
+    }
+
+    // --- DELETE RULE ---
+    function submitDeleteRecord() {
+        const id = document.getElementById('delete-id').value.trim();
+        const index = inventory.findIndex(i => i.id.toLowerCase() === id.toLowerCase());
+        
+        if(index > -1) {
+            fetch('/api/products/' + id, { method: 'DELETE' })
+            .then(res => {
+                if(!res.ok) throw new Error('Deletion failed');
+                return fetchInventory();
+            })
+            .then(() => {
+                closeModal('modal-delete');
+                document.getElementById('delete-id').value = '';
+                showToast('Asset Deleted', 'Product has been permanently purged.', 'delete');
+            })
+            .catch(err => alert(err.message));
+        } else {
+            alert('Target ID not found.');
+        }
+    }
+
+    // --- SEARCH RULE ---
+    function handleLiveSearch(query) {
+        const resultsContainer = document.getElementById('search-results-container');
+        const emptyState = document.getElementById('search-empty-state');
+        const resultsList = document.getElementById('search-results-list');
+
+        if(!query.trim()) {
+            resultsContainer.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            refreshDashboard(inventory); // Reset background dashboard just in case
+            return;
+        }
+
+        const filtered = inventory.filter(i => 
+            (i.id || '').toLowerCase().includes(query.toLowerCase()) || 
+            (i.name || '').toLowerCase().includes(query.toLowerCase())
+        );
+
+        // Update Background Dashboard just to be cool
+        refreshDashboard(filtered);
+
+        // Render Dropdown Results
+        emptyState.classList.add('hidden');
+        resultsContainer.classList.remove('hidden');
+        resultsList.innerHTML = '';
+
+        if(filtered.length === 0) {
+            resultsList.innerHTML = `<div class="p-6 text-center text-slate-400 font-bold border border-slate-200 border-dashed rounded-2xl bg-white/30">No assets match your search.</div>`;
+        } else {
+            filtered.forEach(item => {
+                const imgTag = item.image 
+                    ? `<img src="${item.image}" class="w-12 h-12 object-cover rounded-xl shadow-sm border border-slate-200"/>`
+                    : `<div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200"><span class="material-symbols-outlined text-slate-400">landscape</span></div>`;
+
+                resultsList.innerHTML += `
+                    <div class="flex items-center justify-between p-4 bg-white/60 border border-slate-200 hover:bg-white hover:border-indigo-400 hover:shadow-lg transition-all rounded-2xl group cursor-pointer" onclick="closeModal('modal-search');">
+                        <div class="flex items-center gap-4">
+                            ${imgTag}
+                            <div>
+                                <h4 class="font-bold font-headline text-slate-800 text-lg">${item.name}</h4>
+                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 tracking-wide">${item.id}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-slate-600 text-sm">Stock: ${item.stock}</div>
+                            <div class="font-black font-headline text-emerald-600 text-lg">$${parseFloat(item.price).toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    // --- FILE I/O RAW LOGIC (Export / Import JSON) ---
+    // --- FILE I/O RAW LOGIC (Export / Import JSON) ---
+    function exportData(format) {
+        if(inventory.length === 0) { alert('No data to save!'); return; }
+        
+        const timestamp = new Date().toISOString().slice(0, 10);
+        
+        if (format === 'json') {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inventory, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `HillTop_Backup_${timestamp}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        } 
+        else if (format === 'excel') {
+            const worksheet = XLSX.utils.json_to_sheet(inventory.map(i => ({
+                "Asset ID": i.id,
+                "Product Name": i.name,
+                "Current Stock": i.stock,
+                "Unit Price": '$' + parseFloat(i.price).toFixed(2),
+                "Total Value": '$' + (i.stock * i.price).toFixed(2)
+            })));
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+            XLSX.writeFile(workbook, `HillTop_Report_${timestamp}.xlsx`);
+        }
+        else if (format === 'pdf') {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(22);
+            doc.setTextColor(54, 49, 180);
+            doc.text("HillTop Inventory Report", 14, 22);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text("Generated on: " + new Date().toLocaleString(), 14, 30);
+            doc.text("Total Assets: " + inventory.length, 14, 36);
+            
+            const tableColumn = ["Asset ID", "Product Name", "Stock", "Unit Price", "Total Value"];
+            const tableRows = [];
+
+            inventory.forEach(i => {
+                const itemData = [
+                    i.id,
+                    i.name,
+                    i.stock,
+                    "$" + parseFloat(i.price).toFixed(2),
+                    "$" + (i.stock * i.price).toFixed(2)
+                ];
+                tableRows.push(itemData);
+            });
+
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: 45,
+                theme: 'grid',
+                styles: { font: 'helvetica', fontSize: 10, cellPadding: 4 },
+                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+
+            doc.save(`HillTop_Report_${timestamp}.pdf`);
+        }
+        closeModal('modal-export');
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = async function(e){
+            try {
+                const imported = JSON.parse(e.target.result);
+                if(Array.isArray(imported)){
+                    const uploadPromises = imported.map(item => {
+                        return fetch('/api/products', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(item)
+                        }).then(res => {
+                            if(!res.ok) {
+                                return fetch('/api/products/' + item.id, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(item)
+                                });
+                            }
+                        });
+                    });
+                    
+                    await Promise.all(uploadPromises);
+                    fetchInventory();
+                    if (typeof showToast === "function") {
+                        showToast('Data Synced', 'File imported to database.', 'success');
+                    } else {
+                        alert("System Synced: Data successfully loaded from file.");
+                    }
+                } else { throw new Error("Invalid Array"); }
+            } catch(err){
+                alert("File Load Error: Ensure it is a valid JSON database file.");
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // --- IMAGE TO BASE64 FILE HANDLING ---
+    function handleImageProcess(inputNode, type) {
+        if(inputNode.files && inputNode.files[0]) {
+            const file = inputNode.files[0];
+            
+            // basic check to save space inside localStorage
+            if(file.size > 1024 * 1024 * 2) { // 2MB limit
+                alert("Please select an image smaller than 2MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if(type === 'add') {
+                    currentAddBase64Image = e.target.result;
+                    document.getElementById('add-dropzone').innerHTML = `<img src="${currentAddBase64Image}" class="h-full w-full object-cover rounded-[1.2rem]"/><input type="file" id="add-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />`;
+                } else {
+                    currentUpdateBase64Image = e.target.result;
+                    document.getElementById('update-dropzone').innerHTML = `<img src="${currentUpdateBase64Image}" class="h-full w-full object-cover rounded-[1.2rem]"/><input type="file" id="update-file-input" accept="image/*" class="absolute inset-0 top-6 w-full h-full opacity-0 cursor-pointer" />`;
+                }
+                setupImageUploadListeners(); // re-init child listener
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function setupImageUploadListeners() {
+        const addInput = document.getElementById('add-file-input');
+        if(addInput) {
+            addInput.addEventListener('change', function() { handleImageProcess(this, 'add'); });
+        }
+        const updateInput = document.getElementById('update-file-input');
+        if(updateInput) {
+            updateInput.addEventListener('change', function() { handleImageProcess(this, 'update'); });
+        }
+    }
+    setupImageUploadListeners();
+
+
+    // --- VIEW / MODAL CONTROL ENGINE ---
+    function switchView(viewId, btnElement) {
+        document.querySelectorAll('.nav-link').forEach(btn => {
+            btn.classList.remove('active', 'bg-white/50', 'border-white/60', 'shadow-sm', 'text-indigo-700');
+            btn.classList.add('text-slate-600', 'border-transparent');
+        });
+        btnElement.classList.remove('text-slate-600', 'border-transparent');
+        btnElement.classList.add('active', 'bg-white/50', 'border-white/60', 'shadow-sm', 'text-indigo-700');
+        document.getElementById('topbar-title').innerText = btnElement.querySelector('span:last-child').innerText;
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+        document.body.classList.add('modal-open');
+        if(modalId === 'modal-search') {
+            setTimeout(() => { document.getElementById('searchInput').focus(); }, 100);
+        }
+    }
+
+    function showToast(title, msg, type = 'success') {
+        const toast = document.getElementById('ios-toast');
+        document.getElementById('ios-toast-title').innerText = title;
+        document.getElementById('ios-toast-msg').innerText = msg;
+        
+        const iconContainer = document.getElementById('ios-toast-icon');
+        if(type === 'success') {
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-md shadow-emerald-500/30';
+            iconContainer.innerHTML = '<span class="material-symbols-outlined text-white">check</span>';
+        } else if(type === 'delete') {
+            iconContainer.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-red-400 to-red-600 shadow-md shadow-red-500/30';
+            iconContainer.innerHTML = '<span class="material-symbols-outlined text-white">delete</span>';
+        }
+        
+        toast.classList.remove('-translate-y-20', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+        
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('-translate-y-20', 'opacity-0');
+        }, 3500);
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+        const activeModals = document.querySelectorAll('.modal-overlay.active');
+        if(activeModals.length === 0) {
+            document.body.classList.remove('modal-open');
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if(event.key === "Escape") {
+            document.querySelectorAll('.modal-overlay').forEach(modal => modal.classList.remove('active'));
+            document.body.classList.remove('modal-open');
+        }
+    });
+</script>
+
+</body>
+</html>
