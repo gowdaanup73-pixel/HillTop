@@ -7,18 +7,15 @@ import java.awt.*;
 
 public class InventoryManagementSystem extends JFrame {
 
-    // Theme Colors
     private static final Color CORPORATE_BLUE = new Color(0, 86, 179);
     private static final Color BACKGROUND_WHITE = Color.WHITE;
     private static final Color PANEL_BACKGROUND = new Color(244, 246, 249);
     private static final Color TEXT_DARK = new Color(33, 37, 41);
-    
-    // Fonts
+
     private static final Font HEADER_FONT = new Font("Segoe UI", Font.BOLD, 22);
     private static final Font BUTTON_FONT = new Font("Segoe UI", Font.BOLD, 14);
     private static final Font TABLE_FONT = new Font("Segoe UI", Font.PLAIN, 14);
 
-    // Components
     private JTable productTable;
     private DefaultTableModel tableModel;
 
@@ -30,7 +27,6 @@ public class InventoryManagementSystem extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(PANEL_BACKGROUND);
 
-        // Top Header Panel
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(CORPORATE_BLUE);
         headerPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -40,17 +36,15 @@ public class InventoryManagementSystem extends JFrame {
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        // Center Panel for Table
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBackground(PANEL_BACKGROUND);
         centerPanel.setBorder(new EmptyBorder(20, 20, 20, 10));
 
-        // Setup Table
         String[] columns = {"Product ID", "Name", "Quantity", "Price"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Disable editing directly in table
+                return false;
             }
         };
         productTable = new JTable(tableModel);
@@ -60,13 +54,10 @@ public class InventoryManagementSystem extends JFrame {
         productTable.setSelectionBackground(new Color(200, 225, 255));
         productTable.setSelectionForeground(TEXT_DARK);
 
-        // Style Table Header
         JTableHeader tableHeader = productTable.getTableHeader();
         tableHeader.setFont(new Font("Segoe UI", Font.BOLD, 14));
         tableHeader.setBackground(Color.WHITE);
         tableHeader.setForeground(TEXT_DARK);
-        
-        // Center text in table cells
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         for (int i = 0; i < productTable.getColumnModel().getColumnCount(); i++) {
