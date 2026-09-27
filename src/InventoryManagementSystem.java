@@ -4,7 +4,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
-
 public class InventoryManagementSystem extends JFrame {
 
     private static final Color CORPORATE_BLUE = new Color(0, 86, 179);
